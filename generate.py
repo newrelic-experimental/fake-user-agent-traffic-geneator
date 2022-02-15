@@ -2,12 +2,10 @@ import asyncio
 import httpx
 from pyppeteer import launch
 import toml
-import time
 import random
 from datetime import timedelta
 from typing import NewType
 from attrs import define
-from rich import print
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
