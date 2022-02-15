@@ -1,44 +1,65 @@
 concurrency = 5
 
-urls = [
-    "https://example.com",
-]
+[targets]
+    [targets.login]
+        allowed_request_types = ["browser"]
+        url = "http://webportal.telco.nrdemo-staging.com/login.jsp"
+
+        [targets.login.form]
+            button_selector = "form.form-signin input[type=submit]"
+
+            [targets.login.form.inputs.username]
+                selector = "input[name=username]"
+                value = "seth@hotmail.com"
+            
+            [targets.login.form.inputs.password]
+                selector = "input[name=password]"
+                value = "test123"
+    
+    [targets.home]
+        allowed_request_types = ["browser", "api"]
+        url = "http://webportal.telco.nrdemo-staging.com/"
+    
+    [targets.phones]
+        allowed_request_types = ["browser", "api"]
+        url = "http://webportal.telco.nrdemo-staging.com/browse/phones"
+    
+    [targets.about]
+        allowed_request_types = ["browser", "api"]
+        url = "http://webportal.telco.nrdemo-staging.com/static/about.jsp"
+
 
 [personas]
     [personas.nyc_mac]
-        browser = true
-        min_requests = 5
-        max_requests = 15
+        request_type = "browser"
+        min_requests = 10
+        max_requests = 20
         timeout = 300
         cache_enabled = true
         user_agents = [
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:96.0) Gecko/20100101 Firefox/96.0"
         ]
-        custom_headers = []
         color = 'cyan'
     
     [personas.cnc]
-        browser = false
-        min_requests = 5
-        max_requests = 15
+        request_type = "api"
+        min_requests = 20
+        max_requests = 50
         timeout = 300
-        cache_enabled = false
+        cache_enabled = true
         user_agents = [
             "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu/20.04 Chromium/98.0.4758.80 Chrome/98.0.4758.80 Safari/537.36",
             "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.2; Win64; x64; Trident/6.0; .NET4.0E; .NET4.0C)"
         ]
-        custom_headers = []
         color = 'cyan'
     
     [personas.honeywell]
-        browser = true
-        min_requests = 5
-        max_requests = 15
+        request_type = "api"
+        min_requests = 20
+        max_requests = 50
         timeout = 300
-        cache_enabled = false
         user_agents = [
             "Mozilla/5.0 (Linux; Android 4.4.4; CT50 Build/KTU84P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.95 Safari/537.36",
         ]
-        custom_headers = []
         color = 'cyan'

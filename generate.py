@@ -4,8 +4,9 @@ from pyppeteer import launch
 import toml
 import random
 from datetime import timedelta
-from typing import NewType
+from typing import NewType, Dict, Optional, Union
 from attrs import define
+from rich import print
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
@@ -24,7 +25,7 @@ exceptions_by_persona = {}
 
 
 def add_response_status(request, status_code):
-    name = f"{request.persona} {'(browser)' if request.browser else '(API)'}"
+    name = f"{request.persona} ({request.request_type})"
 
     if name not in response_status_by_persona:
         response_status_by_persona[name] = {}
@@ -35,7 +36,7 @@ def add_response_status(request, status_code):
 
 
 def add_exception(request, e):
-    name = f"{request.persona} {'(browser)' if request.browser else '(API)'}"
+    name = f"{request.persona} ({request.request_type})"
 
     if name not in exceptions_by_persona:
         exceptions_by_persona[name] = {}
@@ -95,12 +96,16 @@ class FakeTraffic(TextualExtended):
 @define
 class RequestByPersona:
     persona: str
+    allowed_request_types: list[str]
+    request_type: str
     url: str
+    method: Optional[str]
+    form: Optional[Dict[str, Union[str, Dict[str, str]]]]
+    data: Optional[Dict[str, str]]
     ua: str
-    browser: bool
-    timeout: int
-    cache_enabled: bool
-    custom_headers: list[str]
+    timeout: Optional[int]
+    cache_enabled: Optional[bool]
+    custom_headers: Optional[Dict[str, str]]
     task: TaskID
 
 
@@ -136,34 +141,44 @@ class ProgressManager:
 
 
 async def make_request(request, browser, progress):
-    if request.browser:
+    if(request.request_type not in request.allowed_request_types):
+        return
+    
+    if request.request_type == "browser":
         try:
             page = await browser.newPage()
             await page.setUserAgent(request.ua)
             await page.setExtraHTTPHeaders(request.custom_headers)
             await page.setCacheEnabled(request.cache_enabled)
-            browser_response = await page.goto(
-                request.url, timeout=request.timeout * 1000
-            )
+            browser_response = await page.goto(request.url, timeout=request.timeout * 1000)
 
-            api_request = httpx.Request(
-                method="GET",
-                url=request.url,
-                headers=browser_response.headers,
-            )
-            api_response = httpx.Response(
-                status_code=browser_response.status, request=api_request
-            )
+            if request.form:
+                for _, input in request.form["inputs"].items():
+                    await page.type(input['selector'], input['value'])
+                
+                finished, _ = await asyncio.wait([
+                    page.click(request.form["button_selector"]),
+                    page.waitForNavigation(),
+                ])
+
+                for task in finished:
+                    if task.result() != None:
+                        browser_response = task.result()
+
             metrics = await page.metrics()
+
+            completed_request = {
+                "url": page.url,
+                "elapsed": timedelta(milliseconds=metrics["TaskDuration"]),
+                "headers": browser_response.headers,
+                "status_code": browser_response.status
+            }
+
             await page.close()
-
-            api_response._elapsed = timedelta(milliseconds=metrics["TaskDuration"])
-            api_response.close()
-
             add_response_status(request, browser_response.status)
-
             progress.advance(request.task)
-            return api_response
+
+            return completed_request
         except Exception as e:
             add_exception(request, e)
             progress.advance(request.task)
@@ -173,10 +188,16 @@ async def make_request(request, browser, progress):
                 headers={**request.custom_headers, **{"User-Agent": request.ua}}
             ) as client:
                 response = await client.get(request.url, timeout=request.timeout)
-
                 add_response_status(request, response.status_code)
                 progress.advance(request.task)
-                return response
+
+                return {
+                    "url": response.url,
+                    "elapsed": response.elapsed,
+                    "headers": response.headers,
+                    "status_code": response.status_code
+                }
+
         except Exception as e:
             add_exception(request, e)
             progress.advance(request.task)
@@ -200,7 +221,7 @@ async def gather_tasks(concurrency, requests, browser, progress):
 async def prepare_requests(config, browser, progress):
     requests = []
 
-    for url in config["urls"]:
+    for _, target in config["targets"].items():
         for key, persona in config["personas"].items():
             for _ in range(
                 random.randint(persona["min_requests"], persona["max_requests"])
@@ -208,12 +229,16 @@ async def prepare_requests(config, browser, progress):
                 requests.append(
                     RequestByPersona(
                         persona=key,
-                        url=url,
+                        allowed_request_types=target['allowed_request_types'],
+                        request_type=persona['request_type'],
+                        url=target['url'],
+                        method=target.get('method', 'GET'),
+                        form=target.get('form', {}),
+                        data=target.get('data', {}),
+                        custom_headers=persona.get('custom_headers', {}),
                         ua=random.choice(persona["user_agents"]),
-                        timeout=persona["timeout"],
-                        cache_enabled=persona["cache_enabled"],
-                        browser=persona["browser"],
-                        custom_headers={h[0]: h[1] for h in persona["custom_headers"]},
+                        timeout=persona.get("timeout", 30),
+                        cache_enabled=persona.get("cache_enabled", True),
                         task=progress.add_task(f"[{persona['color']}]{key}"),
                     )
                 )
@@ -230,6 +255,7 @@ async def main():
     console.clear()
 
     config = toml.load("./config.toml")
+    
     browser = await launch(options={'args': ['--no-sandbox']})
 
     job_progress = Progress(
@@ -290,13 +316,13 @@ async def main():
     for response in requests_results:
         if response:
             elapsed = (
-                f"{response.elapsed.total_seconds()}s"
-                if response.status_code != 417
+                f"{response['elapsed'].total_seconds()}s"
+                if response['status_code'] != 417
                 else "--"
             )
 
             response_log_md.append(
-                f"- **{response.status_code}** ◦ [{response.url.path}]({response.url}) ◦ {elapsed}"
+                f"- **{response['status_code']}** ◦ [{response['url']}]({response['url']}) ◦ {elapsed}"
             )
 
     terminal_app = FakeTraffic(

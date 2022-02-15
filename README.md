@@ -29,18 +29,33 @@ Configuration is done via the `config.toml` file.
 | concurrency | int       | max asyncio primitives |
 | urls        | list[str] | List of URLs to target |
 
+### Target settings
+
+The target of each request is grouped together into Targets
+
+| Name                  | Type                                | Description                                        |
+| --------------------- | ----------------------------------- | -------------------------------------------------- |
+| allowed_request_types | list[str]                           | Allowed request types                              |
+| url                   | str                                 | The URL to request                                 |
+| form                  | Optional[Dict[str, Dict[str, str]]] | Form submission details for request (browser only) |
+| form.button_selector  | str                                 | CSS selector of the form submit button             |
+| form.inputs.selector  | str                                 | CSS selector for form input field                  |
+| form.inputs.value     | str                                 | Value to enter into form input field               |
+
+### Request settings
+
 Request specific settings are grouped together into Personas, you can create as many personas as you would like for each run.
 
-| Name           | Type                 | Description                                                                  |
-| -------------- | -------------------- | ---------------------------------------------------------------------------- |
-| browser        | bool                 | Use a headless browser for these requests (required for RUM)                 |
-| min_requests   | int                  | Minimum number of requests to make per URL                                   |
-| max_requests   | int                  | Maximum number of requests to make per URL                                   |
-| timeout        | int                  | Request timeout in seconds                                                   |
-| cache_enabled  | bool                 | Enable browser cache (only used when browser=true)                           |
-| user_agents    | list[str]            | User-Agent strings to use. A random ua will be choosen per request           |
-| custom_headers | list[list[str, str]] | Any other headers to send with the request. See the example below for syntax |
-| color          | str                  | Persona text color in progress bar                                           |
+| Name           | Type                           | Description                                                                  |
+| -------------- | ------------------------------ | ---------------------------------------------------------------------------- |
+| request_type   | "browser" or "api"             | How the request should be executed ("browser" is required for RUM)           |
+| min_requests   | int                            | Minimum number of requests to make per URL                                   |
+| max_requests   | int                            | Maximum number of requests to make per URL                                   |
+| timeout        | Optional[int]                  | Request timeout in seconds                                                   |
+| cache_enabled  | Optional[bool]                 | Enable browser cache (only used when browser=true)                           |
+| user_agents    | list[str]                      | User-Agent strings to use. A random ua will be choosen per request           |
+| custom_headers | Optional[list[list[str, str]]] | Any other headers to send with the request. See the example below for syntax |
+| color          | str                            | Persona text color in progress bar                                           |
 
 Each custom header must be a list where index 0 is the header key and index 1 is the header value. For example:
 
