@@ -230,7 +230,7 @@ async def main():
     console.clear()
 
     config = toml.load("./config.toml")
-    browser = await launch()
+    browser = await launch(options={'args': ['--no-sandbox']})
 
     job_progress = Progress(
         "{task.description}",
