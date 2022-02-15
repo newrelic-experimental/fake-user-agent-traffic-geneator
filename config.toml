@@ -1,16 +1,14 @@
-concurrency = 10
+concurrency = 5
 
 urls = [
-    "https://newrelic-netlify-demo.netlify.app/4/page-5.html",
-    "https://newrelic-netlify-demo.netlify.app/5/page-41.html",
-    "https://newrelic-netlify-demo.netlify.app/page-6.html"
+    "https://example.com",
 ]
 
 [personas]
     [personas.nyc_mac]
         browser = true
-        min_requests = 50
-        max_requests = 150
+        min_requests = 5
+        max_requests = 15
         timeout = 300
         cache_enabled = true
         user_agents = [
@@ -21,9 +19,9 @@ urls = [
         color = 'cyan'
     
     [personas.cnc]
-        browser = true
-        min_requests = 50
-        max_requests = 150
+        browser = false
+        min_requests = 5
+        max_requests = 15
         timeout = 300
         cache_enabled = false
         user_agents = [
@@ -35,10 +33,10 @@ urls = [
     
     [personas.honeywell]
         browser = true
-        min_requests = 50
-        max_requests = 150
+        min_requests = 5
+        max_requests = 15
         timeout = 300
-        cache_enabled = true
+        cache_enabled = false
         user_agents = [
             "Mozilla/5.0 (Linux; Android 4.4.4; CT50 Build/KTU84P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.95 Safari/537.36",
         ]
