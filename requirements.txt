@@ -1,0 +1,6 @@
+attrs==21.4.0
+httpx==0.22.0
+pyppeteer==1.0.2
+rich==11.2.0
+textual==0.1.15
+toml==0.10.2
