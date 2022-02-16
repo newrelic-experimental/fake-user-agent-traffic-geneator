@@ -251,10 +251,12 @@ async def main():
 
     warnings.filterwarnings("ignore")
 
-    console = Console()
-    console.clear()
-
     config = toml.load("./config.toml")
+    silent_mode = config.get('silent', False)
+
+    if not silent_mode:
+        console = Console()
+        console.clear()
     
     browser = await launch(options={'args': ['--no-sandbox']})
 
@@ -269,70 +271,76 @@ async def main():
 
     progress = ProgressManager(overall_progress, job_progress)
 
-    progress_table = Table.grid()
-    progress_table.add_row(
-        Panel.fit(
-            overall_progress,
-            title="Overall Progress",
-            border_style="yellow",
-            padding=(2, 2),
-        ),
-        Panel.fit(job_progress, title="[b]Jobs", border_style="yellow", padding=(1, 2)),
-    )
+    if not silent_mode:
+        progress_table = Table.grid()
+        progress_table.add_row(
+            Panel.fit(
+                overall_progress,
+                title="Overall Progress",
+                border_style="yellow",
+                padding=(2, 2),
+            ),
+            Panel.fit(job_progress, title="[b]Jobs", border_style="yellow", padding=(1, 2)),
+        )
 
-    with Live(progress_table, refresh_per_second=10):
+        with Live(progress_table, refresh_per_second=10):
+            requests_results = await prepare_requests(config, browser, progress)
+    else:
         requests_results = await prepare_requests(config, browser, progress)
+    
+    await browser.close()
 
-    stats_md = ["# Requests\n"]
+    if not silent_mode:
+        stats_md = ["# Requests\n"]
 
-    for persona_name, statuses in response_status_by_persona.items():
-        stats_md.append(f"- {persona_name}")
-
-        for code, count in statuses.items():
-            stats_md.append(f"- **{code}:** {count}")
-
-        stats_md.append(f"\n")
-        stats_md.append(f"---")
-        stats_md.append(f"\n")
-
-    if len(exceptions_by_persona) > 0:
-        stats_md.append("# Exceptions\n")
-
-        for persona_name, exceptions in exceptions_by_persona.items():
+        for persona_name, statuses in response_status_by_persona.items():
             stats_md.append(f"- {persona_name}")
 
-            for exception_name, count in exceptions.items():
-                stats_md.append(f"- **{exception_name}:** {count}")
+            for code, count in statuses.items():
+                stats_md.append(f"- **{code}:** {count}")
 
             stats_md.append(f"\n")
             stats_md.append(f"---")
             stats_md.append(f"\n")
 
-    response_log_md = ["# Response Log"]
-    response_log_md.append(
-        f"{len(requests_results)} requests made across {len(config['personas'])} personas\n"
-    )
+        if len(exceptions_by_persona) > 0:
+            stats_md.append("# Exceptions\n")
 
-    for response in requests_results:
-        if response:
-            elapsed = (
-                f"{response['elapsed'].total_seconds()}s"
-                if response['status_code'] != 417
-                else "--"
-            )
+            for persona_name, exceptions in exceptions_by_persona.items():
+                stats_md.append(f"- {persona_name}")
 
-            response_log_md.append(
-                f"- **{response['status_code']}** ◦ [{response['url']}]({response['url']}) ◦ {elapsed}"
-            )
+                for exception_name, count in exceptions.items():
+                    stats_md.append(f"- **{exception_name}:** {count}")
 
-    terminal_app = FakeTraffic(
-        stats="\n".join(stats_md),
-        response_log="\n".join(response_log_md),
-        title="Fake Traffic App",
-        log="textual.log",
-    )
+                stats_md.append(f"\n")
+                stats_md.append(f"---")
+                stats_md.append(f"\n")
 
-    await terminal_app.process_messages()
+        response_log_md = ["# Response Log"]
+        response_log_md.append(
+            f"{len(requests_results)} requests made across {len(config['personas'])} personas\n"
+        )
+
+        for response in requests_results:
+            if response:
+                elapsed = (
+                    f"{response['elapsed'].total_seconds()}s"
+                    if response['status_code'] != 417
+                    else "--"
+                )
+
+                response_log_md.append(
+                    f"- **{response['status_code']}** ◦ [{response['url']}]({response['url']}) ◦ {elapsed}"
+                )
+
+        terminal_app = FakeTraffic(
+            stats="\n".join(stats_md),
+            response_log="\n".join(response_log_md),
+            title="Fake Traffic App",
+            log="textual.log",
+        )
+
+        await terminal_app.process_messages()
 
 
 if __name__ == "__main__":

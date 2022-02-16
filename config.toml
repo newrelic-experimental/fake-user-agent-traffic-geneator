@@ -1,4 +1,5 @@
 concurrency = 5
+silent = false
 
 [targets]
     [targets.login]
@@ -43,9 +44,9 @@ concurrency = 5
         color = 'cyan'
     
     [personas.cnc]
-        request_type = "api"
-        min_requests = 20
-        max_requests = 50
+        request_type = "browser"
+        min_requests = 10
+        max_requests = 20
         timeout = 300
         cache_enabled = true
         user_agents = [
@@ -55,9 +56,9 @@ concurrency = 5
         color = 'cyan'
     
     [personas.honeywell]
-        request_type = "api"
-        min_requests = 20
-        max_requests = 50
+        request_type = "browser"
+        min_requests = 10
+        max_requests = 20
         timeout = 300
         user_agents = [
             "Mozilla/5.0 (Linux; Android 4.4.4; CT50 Build/KTU84P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.95 Safari/537.36",
